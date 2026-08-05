@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Android APK
 
 on:
   push:
@@ -21,22 +21,46 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Build APK
+    - name: Install Android SDK packages and accept licenses
+      run: |
+        # Find sdkmanager
+        if [ -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        else
+          SDKMANAGER="$(command -v sdkmanager || true)"
+        fi
+        
+        if [ -z "$SDKMANAGER" ]; then
+          echo "sdkmanager not found"
+          exit 1
+        fi
+        
+        # Accept licenses
+        yes | "$SDKMANAGER" --licenses >/dev/null || true
+        
+        # Install required SDK components
+        yes | "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0" >/dev/null
+
+    - name: Build APK with debug
       run: |
         mkdir -p gradle/wrapper
-        curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
-        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-        echo "distributionUrl=https://services.gradle.org/distributions/gradle-8.2-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-        echo '#!/bin/sh' > gradlew
-        echo 'APP_BASE_NAME=${0##*/}' >> gradlew
-        echo 'APP_HOME=$( cd "${APP_HOME:-./}" && pwd -P ) || exit' >> gradlew
-        echo 'CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar' >> gradlew
-        echo 'exec java -Xmx1536m -Xms512m -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
+        curl -fL -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
+        cat > gradle/wrapper/gradle-wrapper.properties << 'PROP'
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https://services.gradle.org/distributions/gradle-8.2-bin.zip
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        PROP
+        cat > gradlew << 'WRAP'
+        #!/bin/sh
+        APP_BASE_NAME=${0##*/}
+        APP_HOME=$( cd "${APP_HOME:-./}" && pwd -P ) || exit
+        CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+        exec java -Xmx1536m -Xms512m -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+        WRAP
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --no-daemon --stacktrace --info
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
