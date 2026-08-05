@@ -1,3 +1,6 @@
+cd ~/Android-Clone-App
+
+cat > .github/workflows/build.yml << 'EOF'
 name: Build Android APK
 
 on:
@@ -21,24 +24,20 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Generate Gradle Wrapper
+    - name: Create gradle wrapper
       run: |
         mkdir -p gradle/wrapper
         curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
-        cat > gradle/wrapper/gradle-wrapper.properties << 'PROP'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https://services.gradle.org/distributions/gradle-8.2-bin.zip
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        PROP
-        cat > gradlew << 'WRAP'
-        #!/bin/sh
-        APP_BASE_NAME=${0##*/}
-        APP_HOME=$( cd "${APP_HOME:-./}" && pwd -P ) || exit
-        CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-        exec java -Xmx64m -Xms64m -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
-        WRAP
+        echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+        echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo "distributionUrl=https://services.gradle.org/distributions/gradle-8.2-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+        echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+        echo '#!/bin/sh' > gradlew
+        echo 'APP_BASE_NAME=${0##*/}' >> gradlew
+        echo 'APP_HOME=$( cd "${APP_HOME:-./}" && pwd -P ) || exit' >> gradlew
+        echo 'CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar' >> gradlew
+        echo 'exec java -Xmx64m -Xms64m -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
         chmod +x gradlew
     
     - name: Build APK
@@ -49,3 +48,8 @@ jobs:
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+EOF
+
+git add .github/workflows/build.yml
+git commit -m "Fix workflow - simplified wrapper generation"
+git push -u origin main
