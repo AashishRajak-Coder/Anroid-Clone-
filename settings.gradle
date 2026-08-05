@@ -18,5 +18,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AndroidCloner"
+rootProject.name = "AnroidCloner"
 include ':app'
