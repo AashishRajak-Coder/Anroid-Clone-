@@ -24,6 +24,10 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
+    - name: Install required SDKs
+      run: |
+        yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    
     - name: Create gradle wrapper
       run: |
         mkdir -p gradle/wrapper
@@ -37,11 +41,11 @@ jobs:
         echo 'APP_BASE_NAME=${0##*/}' >> gradlew
         echo 'APP_HOME=$( cd "${APP_HOME:-./}" && pwd -P ) || exit' >> gradlew
         echo 'CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar' >> gradlew
-        echo 'exec java -Xmx64m -Xms64m -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
+        echo 'exec java -Xmx1536m -Xms512m -Dorg.gradle.appname="$APP_BASE_NAME" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
         chmod +x gradlew
     
     - name: Build APK
-      run: ./gradlew assembleDebug
+      run: ./gradlew assembleDebug --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx1536m -Dfile.encoding=UTF-8"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -51,5 +55,5 @@ jobs:
 EOF
 
 git add .github/workflows/build.yml
-git commit -m "Fix workflow - simplified wrapper generation"
-git push -u origin main
+git commit -m "Fix: Increase Gradle memory to 1536MB"
+git push -u origin mainv
